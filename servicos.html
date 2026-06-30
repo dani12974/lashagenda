@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Meus serviços — LashAgenda</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<div class="topbar">
+  <a href="dashboard.html" class="brand">
+    <svg viewBox="0 0 26 26"><path class="lash-curve" d="M3 18 Q13 4 23 18" /></svg>
+    LashAgenda
+  </a>
+  <a href="dashboard.html" style="font-size:0.85rem; font-weight:600; text-decoration:none; color:var(--ink);">Painel</a>
+</div>
+
+<div class="shell">
+  <h1>Meus serviços</h1>
+  <p id="intro-text">Cadastre os procedimentos que aparecem na sua agenda pública.</p>
+
+  <div id="lista-servicos"></div>
+
+  <div class="card" style="margin-top:8px;">
+    <h3 style="margin-bottom:14px;">Adicionar serviço</h3>
+    <form id="form-servico">
+      <label for="name">Nome do procedimento</label>
+      <input id="name" type="text" required placeholder="Ex: Volume Russo" />
+
+      <label for="price">Preço (R$)</label>
+      <input id="price" type="number" step="0.01" min="0" required placeholder="150.00" />
+
+      <label for="cost">Custo de material (R$, opcional)</label>
+      <input id="cost" type="number" step="0.01" min="0" placeholder="20.00" />
+      <div class="field-hint">Usado pra calcular sua margem real, não aparece pra cliente.</div>
+
+      <label for="duration_minutes">Duração (minutos)</label>
+      <input id="duration_minutes" type="number" min="5" required placeholder="90" />
+
+      <label for="deposit_percentage">Sinal específico (%, opcional)</label>
+      <input id="deposit_percentage" type="number" min="0" max="100" placeholder="Deixe em branco pra usar o padrão" />
+
+      <label for="photo_url">Link de foto (opcional)</label>
+      <input id="photo_url" type="url" placeholder="https://..." />
+
+      <button type="submit" class="btn btn-primary" id="btn-submit">Adicionar serviço</button>
+      <div class="alert alert-error" id="alert-error"></div>
+    </form>
+  </div>
+
+  <a href="disponibilidade.html" class="btn btn-ghost" style="margin-top:18px;">Continuar para horários de trabalho →</a>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabaseClient.js"></script>
+<script>
+const listEl = document.getElementById("lista-servicos");
+const form = document.getElementById("form-servico");
+const btn = document.getElementById("btn-submit");
+const errorBox = document.getElementById("alert-error");
+let business = null;
+
+async function init() {
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) { window.location.href = "login.html"; return; }
+
+  const { data: biz } = await sb.from("businesses").select("*").eq("owner_id", user.id).maybeSingle();
+  if (!biz) { window.location.href = "onboarding.html"; return; }
+  business = biz;
+  setActiveBusiness(biz);
+
+  if (new URLSearchParams(window.location.search).get("first")) {
+    document.getElementById("intro-text").textContent =
+      "Seu negócio foi criado! Agora adicione pelo menos um serviço pra liberar sua agenda pública.";
+  }
+
+  await loadServices();
+}
+
+async function loadServices() {
+  const { data: services } = await sb
+    .from("services")
+    .select("*")
+    .eq("business_id", business.id)
+    .order("created_at", { ascending: true });
+
+  if (!services || services.length === 0) {
+    listEl.innerHTML = `<div class="empty-state">Nenhum serviço cadastrado ainda.</div>`;
+    return;
+  }
+
+  listEl.innerHTML = services.map(s => `
+    <div class="option-card">
+      <div class="thumb" style="${s.photo_url ? `background-image:url('${s.photo_url}')` : ""}"></div>
+      <div class="info">
+        <strong>${s.name}</strong>
+        <span>${s.duration_minutes} min · sinal ${s.deposit_percentage ?? business.deposit_percentage}%</span>
+      </div>
+      <div class="price">${formatBRL(s.price)}</div>
+    </div>
+  `).join("");
+}
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  errorBox.classList.remove("show");
+  btn.disabled = true;
+  btn.textContent = "Adicionando...";
+
+  const depositInput = document.getElementById("deposit_percentage").value;
+
+  const payload = {
+    business_id: business.id,
+    name: document.getElementById("name").value.trim(),
+    price: Number(document.getElementById("price").value),
+    cost: Number(document.getElementById("cost").value) || 0,
+    duration_minutes: Number(document.getElementById("duration_minutes").value),
+    deposit_percentage: depositInput ? Number(depositInput) : null,
+    photo_url: document.getElementById("photo_url").value.trim() || null
+  };
+
+  const { error } = await sb.from("services").insert(payload);
+
+  if (error) {
+    errorBox.textContent = "Erro ao salvar: " + error.message;
+    errorBox.classList.add("show");
+  } else {
+    form.reset();
+    await loadServices();
+  }
+
+  btn.disabled = false;
+  btn.textContent = "Adicionar serviço";
+});
+
+init();
+</script>
+
+</body>
+</html>
