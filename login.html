@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Entrar — LashAgenda</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<div class="topbar">
+  <a href="index.html" class="brand">
+    <svg viewBox="0 0 26 26"><path class="lash-curve" d="M3 18 Q13 4 23 18" /></svg>
+    LashAgenda
+  </a>
+</div>
+
+<div class="shell">
+  <h1>Entrar</h1>
+  <p>Acesse sua agenda e seu financeiro.</p>
+
+  <div class="card">
+    <form id="form-login">
+      <label for="email">E-mail</label>
+      <input id="email" type="email" required placeholder="voce@email.com" />
+
+      <label for="password">Senha</label>
+      <input id="password" type="password" required placeholder="Sua senha" />
+
+      <button type="submit" class="btn btn-primary" id="btn-submit">Entrar</button>
+
+      <div class="alert alert-error" id="alert-error"></div>
+    </form>
+
+    <a href="cadastro.html" class="btn-block-link">Ainda não tenho conta</a>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabaseClient.js"></script>
+<script>
+const form = document.getElementById("form-login");
+const btn = document.getElementById("btn-submit");
+const errorBox = document.getElementById("alert-error");
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  errorBox.classList.remove("show");
+  btn.disabled = true;
+  btn.textContent = "Entrando...";
+
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+
+  if (error) {
+    errorBox.textContent = "E-mail ou senha incorretos, ou e-mail ainda não confirmado.";
+    errorBox.classList.add("show");
+    btn.disabled = false;
+    btn.textContent = "Entrar";
+    return;
+  }
+
+  const { data: business } = await sb
+    .from("businesses")
+    .select("*")
+    .eq("owner_id", data.user.id)
+    .maybeSingle();
+
+  if (business) {
+    setActiveBusiness(business);
+    window.location.href = "dashboard.html";
+  } else {
+    window.location.href = "onboarding.html";
+  }
+});
+</script>
+
+</body>
+</html>
