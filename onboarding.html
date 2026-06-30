@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Criar meu negócio — LashAgenda</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<div class="topbar">
+  <a href="index.html" class="brand">
+    <svg viewBox="0 0 26 26"><path class="lash-curve" d="M3 18 Q13 4 23 18" /></svg>
+    LashAgenda
+  </a>
+</div>
+
+<div class="shell">
+  <span class="eyebrow">Passo 2 de 2</span>
+  <h1>Conte sobre seu negócio</h1>
+  <p>Esses dados aparecem na sua página de agendamento pública.</p>
+
+  <div class="card">
+    <form id="form-onboarding">
+      <label for="name">Nome do seu negócio</label>
+      <input id="name" type="text" required placeholder="Ex: Camila Lash Studio" />
+
+      <label for="slug">Link da sua agenda</label>
+      <div style="display:flex; align-items:center; gap:6px;">
+        <span style="font-size:0.85rem; color:var(--ink-soft); white-space:nowrap;">lashagenda.com/</span>
+        <input id="slug" type="text" required placeholder="camila-lash" />
+      </div>
+      <div class="field-hint">Só letras minúsculas, números e hífen. É o link que você manda pra cliente.</div>
+
+      <label for="address">Endereço</label>
+      <input id="address" type="text" placeholder="Rua, número, bairro, cidade" />
+
+      <label for="phone">WhatsApp pra contato</label>
+      <input id="phone" type="tel" required placeholder="(11) 90000-0000" />
+
+      <label for="bio">Sobre você (opcional)</label>
+      <textarea id="bio" placeholder="Ex: Especialista em volume russo, 5 anos de experiência."></textarea>
+
+      <label for="deposit_percentage">Sinal padrão (%)</label>
+      <input id="deposit_percentage" type="number" min="0" max="100" value="50" required />
+      <div class="field-hint">Ex: 50% num procedimento de R$150 = R$75 de sinal. Dá pra mudar por serviço depois.</div>
+
+      <label for="pix_key">Chave Pix pra receber o sinal</label>
+      <input id="pix_key" type="text" placeholder="CPF, e-mail, telefone ou chave aleatória" />
+
+      <button type="submit" class="btn btn-primary" id="btn-submit">Criar meu negócio</button>
+
+      <div class="alert alert-error" id="alert-error"></div>
+    </form>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabaseClient.js"></script>
+<script>
+const form = document.getElementById("form-onboarding");
+const btn = document.getElementById("btn-submit");
+const errorBox = document.getElementById("alert-error");
+const nameInput = document.getElementById("name");
+const slugInput = document.getElementById("slug");
+
+let slugTouched = false;
+slugInput.addEventListener("input", () => { slugTouched = true; });
+nameInput.addEventListener("input", () => {
+  if (!slugTouched) slugInput.value = slugify(nameInput.value);
+});
+
+(async () => {
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) {
+    window.location.href = "login.html";
+  }
+})();
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  errorBox.classList.remove("show");
+  btn.disabled = true;
+  btn.textContent = "Criando...";
+
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) {
+    window.location.href = "login.html";
+    return;
+  }
+
+  const payload = {
+    owner_id: user.id,
+    name: nameInput.value.trim(),
+    slug: slugify(slugInput.value.trim()),
+    address: document.getElementById("address").value.trim() || null,
+    phone: document.getElementById("phone").value.trim(),
+    bio: document.getElementById("bio").value.trim() || null,
+    deposit_percentage: Number(document.getElementById("deposit_percentage").value),
+    pix_key: document.getElementById("pix_key").value.trim() || null
+  };
+
+  const { data, error } = await sb.from("businesses").insert(payload).select().single();
+
+  if (error) {
+    errorBox.textContent = error.message.includes("duplicate")
+      ? "Esse link já está em uso, escolha outro."
+      : "Erro ao criar negócio: " + error.message;
+    errorBox.classList.add("show");
+    btn.disabled = false;
+    btn.textContent = "Criar meu negócio";
+    return;
+  }
+
+  setActiveBusiness(data);
+  window.location.href = "servicos.html?first=1";
+});
+</script>
+
+</body>
+</html>
