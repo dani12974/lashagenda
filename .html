@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Agendar — LashAgenda</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<div id="loading" class="shell" style="text-align:center; padding-top:80px;">
+  <span class="spinner" style="border-color: rgba(36,27,30,0.2); border-top-color: var(--rose);"></span>
+  <p style="margin-top:14px; color:var(--ink-soft);">Carregando agenda...</p>
+</div>
+
+<div id="not-found" class="shell" style="display:none; text-align:center; padding-top:80px;">
+  <h2>Agenda não encontrada</h2>
+  <p>Confira se o link está certo com a profissional.</p>
+</div>
+
+<div id="app" style="display:none;">
+
+  <div class="biz-hero">
+    <span class="eyebrow" style="color:var(--champagne);" id="biz-address"></span>
+    <h1 id="biz-name"></h1>
+    <p id="biz-bio"></p>
+  </div>
+
+  <div class="shell">
+
+    <div class="steps">
+      <div class="tick active" data-step="1"></div>
+      <div class="tick" data-step="2"></div>
+      <div class="tick" data-step="3"></div>
+    </div>
+
+    <div id="step-1">
+      <h2>Escolha o procedimento</h2>
+      <div id="lista-servicos"></div>
+    </div>
+
+    <div id="step-2" style="display:none;">
+      <h2>Escolha o dia e horário</h2>
+      <label for="input-date">Data</label>
+      <input type="date" id="input-date" />
+      <div id="lista-horarios" class="slot-grid"></div>
+      <div id="sem-horario" class="empty-state" style="display:none;">Nenhum horário livre nesse dia. Tente outra data.</div>
+      <button class="btn btn-ghost" id="btn-voltar-1" style="margin-top:18px;">← Voltar</button>
+    </div>
+
+    <div id="step-3" style="display:none;">
+      <h2>Seus dados</h2>
+      <form id="form-cliente">
+        <label for="client_name">Seu nome</label>
+        <input id="client_name" type="text" required placeholder="Nome completo" />
+
+        <label for="client_phone">WhatsApp</label>
+        <input id="client_phone" type="tel" required placeholder="(11) 90000-0000" />
+
+        <h3 style="margin-top:24px;">Ficha rápida de cílios</h3>
+        <p style="font-size:0.85rem;">Ajuda a profissional a se preparar pro seu atendimento.</p>
+
+        <div class="checkbox-row">
+          <input type="checkbox" id="allergy_glue" />
+          <label for="allergy_glue">Já tive alergia ou reação à cola de cílios</label>
+        </div>
+
+        <label for="fiber_type">Tipo de fio que prefere (se souber)</label>
+        <input id="fiber_type" type="text" placeholder="Ex: seda, mink, volume russo" />
+
+        <label for="curvature">Curvatura preferida (se souber)</label>
+        <input id="curvature" type="text" placeholder="Ex: C, CC, D" />
+
+        <label for="previous_procedures">Já fez extensão de cílios antes?</label>
+        <textarea id="previous_procedures" placeholder="Conte um pouco, se quiser"></textarea>
+
+        <label for="health_notes">Algo de saúde que a profissional deva saber?</label>
+        <textarea id="health_notes" placeholder="Gestante, lentes de contato, sensibilidade ocular, etc. (opcional)"></textarea>
+
+        <div class="deposit-note" id="deposit-note"></div>
+
+        <button type="submit" class="btn btn-primary" id="btn-confirmar">Confirmar agendamento</button>
+        <div class="alert alert-error" id="alert-error"></div>
+      </form>
+      <button class="btn btn-ghost" id="btn-voltar-2" style="margin-top:10px;">← Voltar</button>
+    </div>
+
+    <div id="step-confirm" style="display:none; text-align:center;">
+      <svg class="divider-curve" style="margin:0 auto 18px;" viewBox="0 0 64 18"><path class="lash-curve" d="M2 14 Q32 2 62 14" /></svg>
+      <h2>Agendamento confirmado!</h2>
+      <p id="confirm-text"></p>
+      <div class="card" id="confirm-deposit" style="text-align:left;"></div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabaseClient.js"></script>
+<script>
+let business = null;
+let services = [];
+let selectedService = null;
+let selectedSlot = null;
+
+function goToStep(n) {
+  [1,2,3].forEach(i => {
+    document.getElementById(`step-${i}`).style.display = i === n ? "block" : "none";
+  });
+  document.querySelectorAll(".tick").forEach(t => {
+    t.classList.toggle("active", Number(t.dataset.step) <= n);
+  });
+}
+
+async function init() {
+  const slug = new URLSearchParams(window.location.search).get("l");
+  if (!slug) {
+    document.getElementById("loading").style.display = "none";
+    document.getElementById("not-found").style.display = "block";
+    return;
+  }
+
+  const { data: biz } = await sb.from("businesses").select("*").eq("slug", slug).maybeSingle();
+
+  if (!biz) {
+    document.getElementById("loading").style.display = "none";
+    document.getElementById("not-found").style.display = "block";
+    return;
+  }
+
+  business = biz;
+  document.getElementById("biz-name").textContent = biz.name;
+  document.getElementById("biz-bio").textContent = biz.bio || "";
+  document.getElementById("biz-address").textContent = biz.address || "Agende seu horário";
+
+  const { data: svc } = await sb
+    .from("services")
+    .select("*")
+    .eq("business_id", biz.id)
+    .eq("active", true)
+    .order("created_at", { ascending: true });
+
+  services = svc || [];
+
+  const listEl = document.getElementById("lista-servicos");
+  if (services.length === 0) {
+    listEl.innerHTML = `<div class="empty-state">Essa profissional ainda não cadastrou serviços.</div>`;
+  } else {
+    listEl.innerHTML = services.map(s => `
+      <div class="option-card" data-id="${s.id}">
+        <div class="thumb" style="${s.photo_url ? `background-image:url('${s.photo_url}')` : ""}"></div>
+        <div class="info">
+          <strong>${s.name}</strong>
+          <span>${s.duration_minutes} min</span>
+        </div>
+        <div class="price">${formatBRL(s.price)}</div>
+      </div>
+    `).join("");
+
+    listEl.querySelectorAll(".option-card").forEach(card => {
+      card.addEventListener("click", () => {
+        selectedService = services.find(s => s.id === card.dataset.id);
+        listEl.querySelectorAll(".option-card").forEach(c => c.classList.remove("selected"));
+        card.classList.add("selected");
+        setTimeout(() => goToStep(2), 200);
+        loadSlotsForToday();
+      });
+    });
+  }
+
+  document.getElementById("loading").style.display = "none";
+  document.getElementById("app").style.display = "block";
+}
+
+function loadSlotsForToday() {
+  const dateInput = document.getElementById("input-date");
+  const today = new Date().toISOString().slice(0,10);
+  dateInput.min = today;
+  dateInput.value = today;
+  loadSlots(today);
+}
+
+document.getElementById("input-date").addEventListener("change", (e) => {
+  loadSlots(e.target.value);
+});
+
+async function loadSlots(dateStr) {
+  selectedSlot = null;
+  const grid = document.getElementById("lista-horarios");
+  const empty = document.getElementById("sem-horario");
+  grid.innerHTML = `<span class="spinner" style="border-color: rgba(36,27,30,0.2); border-top-color: var(--rose);"></span>`;
+  empty.style.display = "none";
+
+  const { data: slots, error } = await sb.rpc("get_available_slots", {
+    p_business_id: business.id,
+    p_service_id: selectedService.id,
+    p_date: dateStr
+  });
+
+  if (error || !slots || slots.length === 0) {
+    grid.innerHTML = "";
+    empty.style.display = "block";
+    return;
+  }
+
+  grid.innerHTML = slots.map(s => {
+    const t = new Date(s.slot_start);
+    const label = t.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    return `<button type="button" class="slot-btn" data-iso="${s.slot_start}">${label}</button>`;
+  }).join("");
+
+  grid.querySelectorAll(".slot-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      grid.querySelectorAll(".slot-btn").forEach(b => b.classList.remove("selected"));
+      btn.classList.add("selected");
+      selectedSlot = btn.dataset.iso;
+      updateDepositNote();
+      setTimeout(() => goToStep(3), 150);
+    });
+  });
+}
+
+function updateDepositNote() {
+  const pct = selectedService.deposit_percentage ?? business.deposit_percentage;
+  const amount = (selectedService.price * pct) / 100;
+  document.getElementById("deposit-note").innerHTML =
+    `💸 Pra garantir seu horário, é pedido um sinal de <strong>${formatBRL(amount)}</strong> (${pct}% do valor). ` +
+    `A profissional vai te enviar a chave Pix pelo WhatsApp.`;
+}
+
+document.getElementById("btn-voltar-1").addEventListener("click", () => goToStep(1));
+document.getElementById("btn-voltar-2").addEventListener("click", () => goToStep(2));
+
+document.getElementById("form-cliente").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const errorBox = document.getElementById("alert-error");
+  errorBox.classList.remove("show");
+
+  if (!selectedSlot) {
+    errorBox.textContent = "Escolha um horário antes de confirmar.";
+    errorBox.classList.add("show");
+    return;
+  }
+
+  const btn = document.getElementById("btn-confirmar");
+  btn.disabled = true;
+  btn.textContent = "Confirmando...";
+
+  const { data, error } = await sb.rpc("book_appointment", {
+    p_business_id: business.id,
+    p_service_id: selectedService.id,
+    p_client_name: document.getElementById("client_name").value.trim(),
+    p_client_phone: document.getElementById("client_phone").value.trim(),
+    p_start_time: selectedSlot,
+    p_allergy_glue: document.getElementById("allergy_glue").checked,
+    p_fiber_type: document.getElementById("fiber_type").value.trim() || null,
+    p_curvature: document.getElementById("curvature").value.trim() || null,
+    p_previous_procedures: document.getElementById("previous_procedures").value.trim() || null,
+    p_health_notes: document.getElementById("health_notes").value.trim() || null
+  });
+
+  if (error) {
+    errorBox.textContent = error.message.includes("indisponível")
+      ? "Esse horário acabou de ser ocupado. Escolha outro."
+      : "Não foi possível confirmar: " + error.message;
+    errorBox.classList.add("show");
+    btn.disabled = false;
+    btn.textContent = "Confirmar agendamento";
+    return;
+  }
+
+  const result = data[0];
+  const dt = new Date(selectedSlot);
+  const dateLabel = dt.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "2-digit" });
+  const timeLabel = dt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+
+  document.getElementById("confirm-text").textContent =
+    `${selectedService.name} no dia ${dateLabel} às ${timeLabel}.`;
+
+  document.getElementById("confirm-deposit").innerHTML = `
+    <p style="margin-bottom:4px;"><strong>Sinal pra garantir o horário</strong></p>
+    <p style="font-size:1.4rem; font-family: var(--font-display); color: var(--rose-dark); margin-bottom:10px;">
+      ${formatBRL(result.deposit_amount)}
+    </p>
+    ${result.pix_key ? `<p style="font-size:0.85rem;">Chave Pix: <strong>${result.pix_key}</strong></p>` : `<p style="font-size:0.85rem;">A profissional vai te mandar os dados do Pix pelo WhatsApp.</p>`}
+  `;
+
+  [1,2,3].forEach(i => document.getElementById(`step-${i}`).style.display = "none");
+  document.querySelector(".steps").style.display = "none";
+  document.getElementById("step-confirm").style.display = "block";
+});
+
+init();
+</script>
+
+</body>
+</html>
