@@ -1,0 +1,397 @@
+/* =========================================================
+   LASHAGENDA — Design tokens & componentes base
+   Paleta inspirada em rímel/tinta (ink), pele quente (paper)
+   e o tom rosado usado em estúdios de cílios.
+   ========================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..700;1,6..96,400..600&family=Manrope:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --ink: #241B1E;
+  --ink-soft: #3A2E30;
+  --paper: #FBF5F1;
+  --paper-card: #FFFFFF;
+  --rose: #C97B86;
+  --rose-dark: #A85C68;
+  --champagne: #E3C39A;
+  --line: #E8DAD2;
+  --success: #5B8C6B;
+  --error: #B5483D;
+
+  --font-display: 'Bodoni Moda', Georgia, serif;
+  --font-body: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  --radius: 14px;
+  --radius-sm: 8px;
+  --shadow: 0 8px 24px rgba(36, 27, 30, 0.08);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--paper);
+  color: var(--ink-soft);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  min-height: 100vh;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+  color: var(--ink);
+  margin: 0 0 0.4em 0;
+  line-height: 1.1;
+  font-weight: 600;
+}
+
+h1 { font-size: clamp(2rem, 6vw, 2.8rem); }
+h2 { font-size: clamp(1.4rem, 4vw, 1.9rem); }
+h3 { font-size: 1.15rem; }
+
+p { line-height: 1.55; margin: 0 0 1em 0; }
+
+a { color: var(--rose-dark); }
+
+.eyebrow {
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--rose-dark);
+  font-weight: 700;
+  margin-bottom: 0.6em;
+  display: inline-block;
+}
+
+.shell {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 32px 20px 64px;
+}
+
+.shell-wide {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 32px 20px 64px;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.brand svg { width: 26px; height: 26px; }
+
+.lash-curve {
+  stroke: var(--rose);
+  stroke-width: 2.2;
+  fill: none;
+  stroke-linecap: round;
+  stroke-dasharray: 60;
+  stroke-dashoffset: 60;
+  animation: draw 0.9s ease forwards;
+}
+
+@keyframes draw {
+  to { stroke-dashoffset: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lash-curve { animation: none; stroke-dashoffset: 0; }
+}
+
+.divider-curve {
+  display: block;
+  margin: 28px 0;
+  width: 64px;
+  height: 18px;
+}
+
+.card {
+  background: var(--paper-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 28px 24px;
+  border: 1px solid var(--line);
+}
+
+label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 18px 0 6px;
+}
+
+label:first-child { margin-top: 0; }
+
+input, select, textarea {
+  width: 100%;
+  padding: 13px 14px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--line);
+  background: var(--paper);
+  font-family: var(--font-body);
+  font-size: 0.96rem;
+  color: var(--ink);
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--rose);
+  box-shadow: 0 0 0 3px rgba(201, 123, 134, 0.18);
+}
+
+textarea { resize: vertical; min-height: 80px; }
+
+.field-hint {
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  opacity: 0.7;
+  margin-top: 4px;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.checkbox-row input { width: 18px; height: 18px; flex-shrink: 0; }
+.checkbox-row label { margin: 0; font-weight: 500; }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px 20px;
+  border-radius: var(--radius-sm);
+  border: none;
+  font-family: var(--font-body);
+  font-size: 0.96rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.12s ease, background 0.15s ease;
+  text-decoration: none;
+}
+
+.btn-primary {
+  background: var(--rose);
+  color: #fff;
+  margin-top: 26px;
+}
+
+.btn-primary:hover { background: var(--rose-dark); }
+.btn-primary:active { transform: scale(0.98); }
+.btn-primary:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--ink);
+  border: 1.5px solid var(--line);
+}
+
+.btn-ghost:hover { border-color: var(--rose); color: var(--rose-dark); }
+
+.btn-block-link {
+  display: block;
+  text-align: center;
+  margin-top: 16px;
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+}
+
+.alert {
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 0.88rem;
+  margin-top: 16px;
+  display: none;
+}
+
+.alert-error { background: #FBEAE7; color: var(--error); border: 1px solid #F2CFC8; }
+.alert-success { background: #EAF2EC; color: var(--success); border: 1px solid #CFE3D5; }
+.alert.show { display: block; }
+
+.steps {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 24px;
+}
+
+.steps .tick {
+  flex: 1;
+  height: 4px;
+  border-radius: 4px;
+  background: var(--line);
+}
+
+.steps .tick.active { background: var(--rose); }
+
+.option-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--line);
+  background: var(--paper-card);
+  cursor: pointer;
+  margin-bottom: 10px;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.option-card:hover { border-color: var(--rose); }
+.option-card.selected { border-color: var(--rose); background: #FCEFEE; }
+
+.option-card .thumb {
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  background: var(--champagne);
+  flex-shrink: 0;
+  background-size: cover;
+  background-position: center;
+}
+
+.option-card .info { flex: 1; }
+.option-card .info strong { display: block; color: var(--ink); font-size: 0.97rem; }
+.option-card .info span { font-size: 0.82rem; color: var(--ink-soft); opacity: 0.75; }
+.option-card .price { font-weight: 700; color: var(--rose-dark); white-space: nowrap; }
+
+.slot-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.slot-btn {
+  padding: 11px 6px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--line);
+  background: var(--paper-card);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.slot-btn.selected { background: var(--rose); border-color: var(--rose); color: #fff; }
+.slot-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.appt-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.appt-row:last-child { border-bottom: none; }
+
+.appt-time {
+  font-weight: 700;
+  color: var(--ink);
+  min-width: 64px;
+}
+
+.badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 4px 9px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.badge-pending { background: #FBEFE2; color: #9C6A1E; }
+.badge-paid { background: #EAF2EC; color: var(--success); }
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.summary-card {
+  background: var(--ink);
+  color: var(--paper);
+  border-radius: var(--radius);
+  padding: 18px;
+}
+
+.summary-card .num {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  display: block;
+  margin-top: 4px;
+}
+
+.summary-card.rose { background: var(--rose); }
+
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--ink-soft);
+  opacity: 0.7;
+}
+
+.biz-hero {
+  text-align: center;
+  padding: 36px 20px 24px;
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.biz-hero h1 { color: var(--paper); }
+.biz-hero p { color: var(--champagne); opacity: 0.9; }
+
+.deposit-note {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  background: #FCEFEE;
+  border: 1px solid #F3D4D9;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  margin-top: 16px;
+  color: var(--ink-soft);
+}
+
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,0.5);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
