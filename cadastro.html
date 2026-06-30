@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Criar conta — LashAgenda</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<div class="topbar">
+  <a href="index.html" class="brand">
+    <svg viewBox="0 0 26 26"><path class="lash-curve" d="M3 18 Q13 4 23 18" /></svg>
+    LashAgenda
+  </a>
+</div>
+
+<div class="shell">
+  <span class="eyebrow">Passo 1 de 2</span>
+  <h1>Criar sua conta</h1>
+  <p>Depois você monta seu negócio e seus serviços.</p>
+
+  <div class="card">
+    <form id="form-cadastro">
+      <label for="full_name">Seu nome</label>
+      <input id="full_name" type="text" required placeholder="Ex: Camila Souza" />
+
+      <label for="email">E-mail</label>
+      <input id="email" type="email" required placeholder="voce@email.com" />
+
+      <label for="phone">WhatsApp</label>
+      <input id="phone" type="tel" required placeholder="(11) 90000-0000" />
+
+      <label for="password">Senha</label>
+      <input id="password" type="password" required minlength="6" placeholder="Mínimo 6 caracteres" />
+
+      <button type="submit" class="btn btn-primary" id="btn-submit">Criar conta</button>
+
+      <div class="alert alert-error" id="alert-error"></div>
+      <div class="alert alert-success" id="alert-success"></div>
+    </form>
+
+    <a href="login.html" class="btn-block-link">Já tenho conta — entrar</a>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabaseClient.js"></script>
+<script>
+const form = document.getElementById("form-cadastro");
+const btn = document.getElementById("btn-submit");
+const errorBox = document.getElementById("alert-error");
+const successBox = document.getElementById("alert-success");
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  errorBox.classList.remove("show");
+  successBox.classList.remove("show");
+  btn.disabled = true;
+  btn.textContent = "Criando...";
+
+  const full_name = document.getElementById("full_name").value.trim();
+  const email = document.getElementById("email").value.trim();
+  const phone = document.getElementById("phone").value.trim();
+  const password = document.getElementById("password").value;
+
+  const { data, error } = await sb.auth.signUp({
+    email,
+    password,
+    options: { data: { full_name, phone } }
+  });
+
+  if (error) {
+    errorBox.textContent = error.message.includes("already registered")
+      ? "Esse e-mail já tem cadastro. Tente entrar."
+      : "Não foi possível criar a conta: " + error.message;
+    errorBox.classList.add("show");
+    btn.disabled = false;
+    btn.textContent = "Criar conta";
+    return;
+  }
+
+  if (data.session) {
+    window.location.href = "onboarding.html";
+    return;
+  }
+
+  successBox.textContent = "Conta criada! Verifique seu e-mail para confirmar e depois faça login.";
+  successBox.classList.add("show");
+  btn.disabled = false;
+  btn.textContent = "Conta criada";
+  form.reset();
+});
+</script>
+
+</body>
+</html>
