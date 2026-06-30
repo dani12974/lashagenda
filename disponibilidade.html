@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Meus horários — LashAgenda</title>
+<link rel="stylesheet" href="css/style.css" />
+<style>
+  .day-row {
+    border: 1.5px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 14px;
+    margin-bottom: 10px;
+  }
+  .day-row.off { opacity: 0.55; }
+  .day-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .day-head label { margin: 0; }
+  .day-times {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .day-times input { padding: 10px; }
+  .switch {
+    width: 42px; height: 24px;
+    position: relative;
+  }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider {
+    position: absolute; inset: 0;
+    background: var(--line);
+    border-radius: 24px;
+    cursor: pointer;
+    transition: 0.15s;
+  }
+  .slider::before {
+    content: ""; position: absolute;
+    width: 18px; height: 18px; left: 3px; top: 3px;
+    background: #fff; border-radius: 50%;
+    transition: 0.15s;
+  }
+  input:checked + .slider { background: var(--rose); }
+  input:checked + .slider::before { transform: translateX(18px); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="dashboard.html" class="brand">
+    <svg viewBox="0 0 26 26"><path class="lash-curve" d="M3 18 Q13 4 23 18" /></svg>
+    LashAgenda
+  </a>
+  <a href="dashboard.html" style="font-size:0.85rem; font-weight:600; text-decoration:none; color:var(--ink);">Painel</a>
+</div>
+
+<div class="shell">
+  <h1>Meus horários</h1>
+  <p>Escolha os dias que você atende e o horário de cada um. A cliente só vai ver esses horários na agenda pública.</p>
+
+  <div id="dias"></div>
+
+  <button id="btn-salvar" class="btn btn-primary">Salvar horários</button>
+  <div class="alert alert-error" id="alert-error"></div>
+  <div class="alert alert-success" id="alert-success"></div>
+
+  <a href="dashboard.html" class="btn btn-ghost" style="margin-top:18px;" id="link-final">Ir para o painel →</a>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabaseClient.js"></script>
+<script>
+const DIAS = ["Domingo","Segunda","Terça","Quarta","Quinta","Sexta","Sábado"];
+const diasEl = document.getElementById("dias");
+const btn = document.getElementById("btn-salvar");
+const errorBox = document.getElementById("alert-error");
+const successBox = document.getElementById("alert-success");
+let business = null;
+
+function renderDay(weekday, existing) {
+  const on = !!existing;
+  return `
+    <div class="day-row ${on ? "" : "off"}" data-weekday="${weekday}">
+      <div class="day-head">
+        <label>${DIAS[weekday]}</label>
+        <label class="switch">
+          <input type="checkbox" class="toggle" ${on ? "checked" : ""} />
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="day-times">
+        <input type="time" class="start" value="${existing ? existing.start_time.slice(0,5) : "09:00"}" />
+        <input type="time" class="end" value="${existing ? existing.end_time.slice(0,5) : "18:00"}" />
+      </div>
+    </div>
+  `;
+}
+
+async function init() {
+  const { data: { user } } = await sb.auth.getUser();
+  if (!user) { window.location.href = "login.html"; return; }
+
+  const { data: biz } = await sb.from("businesses").select("*").eq("owner_id", user.id).maybeSingle();
+  if (!biz) { window.location.href = "onboarding.html"; return; }
+  business = biz;
+
+  const { data: availability } = await sb
+    .from("availability")
+    .select("*")
+    .eq("business_id", business.id);
+
+  let html = "";
+  for (let w = 0; w <= 6; w++) {
+    const existing = (availability || []).find(a => a.weekday === w);
+    html += renderDay(w, existing);
+  }
+  diasEl.innerHTML = html;
+
+  diasEl.querySelectorAll(".toggle").forEach(input => {
+    input.addEventListener("change", (e) => {
+      e.target.closest(".day-row").classList.toggle("off", !e.target.checked);
+    });
+  });
+}
+
+btn.addEventListener("click", async () => {
+  errorBox.classList.remove("show");
+  successBox.classList.remove("show");
+  btn.disabled = true;
+  btn.textContent = "Salvando...";
+
+  const rows = [];
+  diasEl.querySelectorAll(".day-row").forEach(row => {
+    const checked = row.querySelector(".toggle").checked;
+    if (checked) {
+      rows.push({
+        business_id: business.id,
+        weekday: Number(row.dataset.weekday),
+        start_time: row.querySelector(".start").value,
+        end_time: row.querySelector(".end").value
+      });
+    }
+  });
+
+  await sb.from("availability").delete().eq("business_id", business.id);
+
+  if (rows.length > 0) {
+    const { error } = await sb.from("availability").insert(rows);
+    if (error) {
+      errorBox.textContent = "Erro ao salvar: " + error.message;
+      errorBox.classList.add("show");
+      btn.disabled = false;
+      btn.textContent = "Salvar horários";
+      return;
+    }
+  }
+
+  successBox.textContent = "Horários salvos!";
+  successBox.classList.add("show");
+  btn.disabled = false;
+  btn.textContent = "Salvar horários";
+});
+
+init();
+</script>
+
+</body>
+</html>
